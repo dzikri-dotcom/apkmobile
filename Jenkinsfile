@@ -2,27 +2,41 @@ pipeline {
     agent any
 
     environment {
-        // Nama image di DockerHub (ganti sesuai akunmu)
+        // Lokasi Flutter SDK di Windows
+        FLUTTER_HOME = "C:\\src\\flutter"
+        PATH = "${FLUTTER_HOME}\\bin;${env.PATH}"
+
+        // Image DockerHub
         DOCKER_IMAGE = "dzikri2811/truth_or_dare_app"
         DOCKER_TAG = "latest"
     }
 
     stages {
-        stage('Checkout Repository') {
+        stage('Checkout') {
             steps {
-                // Ambil source code dari GitHub
+                echo "📥 Checkout dari GitHub..."
                 git branch: 'main',
                     url: 'https://github.com/dzikri-dotcom/apkmobile.git',
                     credentialsId: 'github-credentials'
             }
         }
 
-        stage('Flutter Setup & Build') {
+        stage('Flutter Build') {
             steps {
-                echo "🚀 Menjalankan build Flutter APK..."
-                bat 'flutter --version'
-                bat 'flutter pub get'
-                bat 'flutter build apk --release'
+                echo "🚀 Build Flutter APK..."
+                bat '''
+                git config --system --add safe.directory C:/src/flutter
+                git config --global --add safe.directory C:/src/flutter
+
+                echo ===== Flutter Doctor =====
+                flutter doctor
+
+                echo ===== Flutter Pub Get =====
+                flutter pub get
+
+                echo ===== Build APK Release =====
+                flutter build apk --release
+                '''
             }
         }
 
@@ -30,7 +44,7 @@ pipeline {
             steps {
                 echo "🐳 Membangun image Docker..."
                 script {
-                    // Gunakan Dockerfile dari folder docker/
+                    // Gunakan Dockerfile yang ada di folder docker/
                     bat """
                     docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} -f docker/Dockerfile .
                     """
@@ -40,7 +54,7 @@ pipeline {
 
         stage('Push to DockerHub') {
             steps {
-                echo "📤 Mengunggah image ke DockerHub..."
+                echo "📤 Push image ke DockerHub..."
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'dockerhub-credentials',
@@ -60,10 +74,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Build & push berhasil ke DockerHub!"
+            echo "✅ Build & Push berhasil ke DockerHub!"
         }
         failure {
-            echo "❌ Build gagal, silakan cek log Jenkins untuk detail error."
+            echo "❌ Build gagal! Silakan cek log Jenkins untuk detail error."
         }
     }
 }
