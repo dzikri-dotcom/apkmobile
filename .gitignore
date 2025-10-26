@@ -1,0 +1,11 @@
+build/ 
+# Ignore hasil build Flutter
+build/
+**/build/
+**/*.apk
+**/*.aab
+**/*.so
+.dart_tool/
+.idea/
+.vscode/
+*.iml
