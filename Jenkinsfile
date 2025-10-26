@@ -2,28 +2,32 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "dzikri2811/truth_or_dare_app"  // ganti dengan username dockerhub kamu
+        DOCKER_IMAGE = "dzikri2811/truth_or_dare_app"  // Ganti dengan nama image DockerHub kamu
         DOCKER_TAG = "latest"
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/username/truth_or_dare.git'
+                // Pastikan kamu sudah menambahkan credentials GitHub dengan ID: github-credentials
+                git branch: 'main',
+                    url: 'https://github.com/dzikri-dotcom/apkmobile.git',
+                    credentialsId: 'github-credentials'
             }
         }
 
         stage('Flutter Build') {
             steps {
-                sh 'flutter pub get'
-                sh 'flutter build apk --release'
+                // Pastikan Jenkins sudah terinstall Flutter SDK dan ada di PATH
+                bat 'flutter pub get'
+                bat 'flutter build apk --release'
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh 'docker build -t $DOCKER_IMAGE:$DOCKER_TAG .'
+                    bat "docker build -t %DOCKER_IMAGE%:%DOCKER_TAG% ."
                 }
             }
         }
@@ -31,9 +35,9 @@ pipeline {
         stage('Push to DockerHub') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh """
-                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push $DOCKER_IMAGE:$DOCKER_TAG
+                    bat """
+                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                        docker push %DOCKER_IMAGE%:%DOCKER_TAG%
                     """
                 }
             }
