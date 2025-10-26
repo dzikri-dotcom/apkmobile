@@ -1,16 +1,18 @@
+# Gunakan Ubuntu sebagai base image
 FROM ubuntu:22.04
+
+# Set environment variable
+ENV DEBIAN_FRONTEND=noninteractive
+ENV ANDROID_HOME=/usr/lib/android-sdk
+ENV PATH=$PATH:/usr/local/flutter/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
 
 # Install dependencies
 RUN apt-get update && apt-get install -y git curl unzip xz-utils zip openjdk-11-jdk
 
-# Install Flutter SDK
+# Install Flutter
 RUN git clone https://github.com/flutter/flutter.git /usr/local/flutter -b stable
-ENV PATH="/usr/local/flutter/bin:/usr/local/flutter/bin/cache/dart-sdk/bin:${PATH}"
 
-# Install Android SDK (minimal setup)
-ENV ANDROID_HOME="/usr/lib/android-sdk"
-ENV PATH="${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools:${PATH}"
-
+# Install Android SDK Command Line Tools
 RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
     cd ${ANDROID_HOME}/cmdline-tools && \
     curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip && \
@@ -25,12 +27,17 @@ RUN mkdir -p ${ANDROID_HOME}/cmdline-tools && \
 # Set working directory
 WORKDIR /app
 
-# Copy source code dari parent folder
-COPY .. .
+# Copy project files
+COPY . /app
 
-# Install dependencies dan build release APK
-RUN flutter doctor
+# Jalankan flutter pub get
 RUN flutter pub get
-RUN flutter build apk --release
 
-CMD ["echo", "✅ Flutter build complete!"]
+# Build APK (debug mode)
+RUN flutter build apk --debug
+
+# Expose port
+EXPOSE 8080
+
+# Jalankan aplikasi Flutter web (opsional, jika ada web support)
+CMD ["flutter", "run", "-d", "web-server", "--web-port=8080", "--web-hostname=0.0.0.0"]
