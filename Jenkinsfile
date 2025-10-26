@@ -3,26 +3,28 @@ pipeline {
 
     environment {
         FLUTTER_HOME = "C:\\src\\flutter"
+        PATH = "${FLUTTER_HOME}\\bin;${env.PATH}"
         ANDROID_HOME = "C:\\Users\\Dzikri\\AppData\\Local\\Android\\Sdk"
         DOCKER_IMAGE = "dzikri2811/truth_or_dare_app"
         DOCKER_TAG = "latest"
     }
 
     stages {
+
         stage('Checkout') {
             steps {
-                echo "📥 Checkout dari GitHub..."
+                echo "📥 Checkout source code dari GitHub..."
                 git branch: 'main',
                     url: 'https://github.com/dzikri-dotcom/apkmobile.git',
                     credentialsId: 'github-credentials'
             }
         }
 
-        stage('Flutter Build') {
+        stage('Flutter Doctor & Build') {
             steps {
-                echo "🚀 Build Flutter APK..."
+                echo "🚀 Mengecek Flutter dan membuild APK..."
                 bat '''
-                set PATH=%FLUTTER_HOME%\\bin;%PATH%
+                flutter config --android-sdk "C:\\Users\\Dzikri\\AppData\\Local\\Android\\Sdk"
                 flutter doctor
                 flutter pub get
                 flutter build apk --release
@@ -33,9 +35,12 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo "🐳 Membangun image Docker..."
-                bat '''
-                docker build -t dzikri2811/truth_or_dare_app:latest -f docker/Dockerfile .
-                '''
+                script {
+                    bat """
+                    echo Building Docker image...
+                    docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} -f docker/Dockerfile .
+                    """
+                }
             }
         }
 
@@ -49,10 +54,12 @@ pipeline {
                         passwordVariable: 'DOCKER_PASS'
                     )
                 ]) {
-                    bat '''
+                    bat """
+                    echo Login ke Docker Hub...
                     echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-                    docker push dzikri2811/truth_or_dare_app:latest
-                    '''
+                    docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                    docker logout
+                    """
                 }
             }
         }
@@ -60,10 +67,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Build & push berhasil ke Docker Hub!"
+            echo "✅ Build & Push berhasil ke Docker Hub!"
         }
         failure {
-            echo "❌ Build gagal, cek log Jenkins."
+            echo "❌ Build gagal, periksa log error di Jenkins Console Output."
         }
     }
 }
