@@ -2,11 +2,9 @@ pipeline {
     agent any
 
     environment {
-        // Lokasi Flutter SDK di Windows
         FLUTTER_HOME = "C:\\src\\flutter"
         PATH = "${FLUTTER_HOME}\\bin;${env.PATH}"
-
-        // Image DockerHub
+        ANDROID_HOME = "C:\\Users\\Dzikri\\AppData\\Local\\Android\\Sdk"
         DOCKER_IMAGE = "dzikri2811/truth_or_dare_app"
         DOCKER_TAG = "latest"
     }
@@ -25,16 +23,9 @@ pipeline {
             steps {
                 echo "🚀 Build Flutter APK..."
                 bat '''
-                git config --system --add safe.directory C:/src/flutter
-                git config --global --add safe.directory C:/src/flutter
-
-                echo ===== Flutter Doctor =====
+                flutter config --android-sdk "C:\\Users\\Dzikri\\AppData\\Local\\Android\\Sdk"
                 flutter doctor
-
-                echo ===== Flutter Pub Get =====
                 flutter pub get
-
-                echo ===== Build APK Release =====
                 flutter build apk --release
                 '''
             }
@@ -44,7 +35,6 @@ pipeline {
             steps {
                 echo "🐳 Membangun image Docker..."
                 script {
-                    // Gunakan Dockerfile yang ada di folder docker/
                     bat """
                     docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} -f docker/Dockerfile .
                     """
@@ -54,7 +44,7 @@ pipeline {
 
         stage('Push to DockerHub') {
             steps {
-                echo "📤 Push image ke DockerHub..."
+                echo "📦 Push image ke DockerHub..."
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'dockerhub-credentials',
@@ -65,7 +55,6 @@ pipeline {
                     bat """
                     echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
                     docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
-                    docker logout
                     """
                 }
             }
@@ -74,10 +63,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Build & Push berhasil ke DockerHub!"
+            echo "✅ Build & push berhasil ke Docker Hub!"
         }
         failure {
-            echo "❌ Build gagal! Silakan cek log Jenkins untuk detail error."
+            echo "❌ Build gagal, cek log Jenkins."
         }
     }
 }
