@@ -2,14 +2,16 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "dzikri2811/truth_or_dare_app"  // Ganti dengan nama image DockerHub kamu
+        FLUTTER_HOME = "C:\\src\\flutter"
+        PATH = "${FLUTTER_HOME}\\bin;${env.PATH}"
+        DOCKER_IMAGE = "dzikri2811/truth_or_dare_app"  // ganti dengan nama image kamu di DockerHub
         DOCKER_TAG = "latest"
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Pastikan kamu sudah menambahkan credentials GitHub dengan ID: github-credentials
+                // Ambil kode dari GitHub (pakai credentials GitHub kamu)
                 git branch: 'main',
                     url: 'https://github.com/dzikri-dotcom/apkmobile.git',
                     credentialsId: 'github-credentials'
@@ -18,26 +20,43 @@ pipeline {
 
         stage('Flutter Build') {
             steps {
-                // Pastikan Jenkins sudah terinstall Flutter SDK dan ada di PATH
-                bat 'flutter pub get'
-                bat 'flutter build apk --release'
+                // Perbaiki akses Git dan pastikan Flutter dikenali
+                bat '''
+                git config --system --add safe.directory C:/src/flutter
+                git config --global --add safe.directory C:/src/flutter
+
+                echo ===== Flutter Doctor =====
+                flutter doctor
+
+                echo ===== Flutter Pub Get =====
+                flutter pub get
+
+                echo ===== Build APK =====
+                flutter build apk --release
+                '''
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    bat "docker build -t %DOCKER_IMAGE%:%DOCKER_TAG% ."
+                    bat """
+                    docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
+                    """
                 }
             }
         }
 
         stage('Push to DockerHub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([
+                    usernamePassword(credentialsId: 'dockerhub-credentials',
+                                     usernameVariable: 'DOCKER_USER',
+                                     passwordVariable: 'DOCKER_PASS')
+                ]) {
                     bat """
-                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-                        docker push %DOCKER_IMAGE%:%DOCKER_TAG%
+                    echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                    docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
                     """
                 }
             }
