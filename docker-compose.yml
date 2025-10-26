@@ -1,0 +1,8 @@
+services:
+  truth-or-dare-app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "9070:80"   # host:container
+    command: flutter run -d web-server --web-port 80 --web-hostname 0.0.0.0
