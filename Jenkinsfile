@@ -3,7 +3,6 @@ pipeline {
 
     environment {
         FLUTTER_HOME = "C:\\src\\flutter"
-        PATH = "${FLUTTER_HOME}\\bin;${env.PATH}"
         ANDROID_HOME = "C:\\Users\\Dzikri\\AppData\\Local\\Android\\Sdk"
         DOCKER_IMAGE = "dzikri2811/truth_or_dare_app"
         DOCKER_TAG = "latest"
@@ -23,7 +22,7 @@ pipeline {
             steps {
                 echo "🚀 Build Flutter APK..."
                 bat '''
-                flutter config --android-sdk "C:\\Users\\Dzikri\\AppData\\Local\\Android\\Sdk"
+                set PATH=%FLUTTER_HOME%\\bin;%PATH%
                 flutter doctor
                 flutter pub get
                 flutter build apk --release
@@ -34,11 +33,9 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo "🐳 Membangun image Docker..."
-                script {
-                    bat """
-                    docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} -f docker/Dockerfile .
-                    """
-                }
+                bat '''
+                docker build -t dzikri2811/truth_or_dare_app:latest -f docker/Dockerfile .
+                '''
             }
         }
 
@@ -52,10 +49,10 @@ pipeline {
                         passwordVariable: 'DOCKER_PASS'
                     )
                 ]) {
-                    bat """
+                    bat '''
                     echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-                    docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
-                    """
+                    docker push dzikri2811/truth_or_dare_app:latest
+                    '''
                 }
             }
         }
